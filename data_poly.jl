@@ -22,15 +22,38 @@ julia> data_poly([1, 2, 3], orthogonal=true)
 ```
 """
 function data_poly(x, degree=2; orthogonal=false)
+    n = length(x)
+
     if orthogonal
-        z = x .- mean(x)  # Center the data by subtracting its mean
-        X = hcat([z .^ deg for deg in 1:degree]...)  # Create the matrix of powers up to 'degree'
-        QR = qr(X)  # Perform QR decomposition
-        X = Matrix(QR.Q)  # Extract the orthogonal matrix Q
+        # Step 1: Center the data by subtracting its mean
+        z = x .- mean(x)
+
+        # Step 2: Generate the raw polynomial design matrix up to 'degree'
+        X_raw = hcat([z .^ d for d in 0:degree]...)
+
+        # Step 3: QR decomposition
+        QR = qr(X_raw)
+
+        # Step 4: Extract the orthogonal matrix Q
+        Z = Matrix(QR.Q[:, 2:end])  # Drop the first column corresponding to the constant term
+
+        # Step 5: Scale columns to have norm 1 (to match R's behavior)
+        norm2 = sum(Z .^ 2, dims=1)
+        Z = Z ./ sqrt.(norm2)
+
+        # Step 6: Ensure the signs are consistent
+        for j in 1:size(Z, 2)
+            if sum(Z[:, j]) < 0
+                Z[:, j] = -Z[:, j]
+            end
+        end
+
+        return Z
     else
-        X = hcat([x .^ deg for deg in 1:degree]...)  # Create the matrix of powers up to 'degree'
+        # Raw polynomial terms
+        X = hcat([x .^ d for d in 1:degree]...)
+        return X
     end
-    return X
 end
 
 
