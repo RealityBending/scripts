@@ -16,47 +16,53 @@ julia> data_poly([1, 2, 3])
 
 julia> data_poly([1, 2, 3], orthogonal=true)
 3×2 Matrix{Float64}:
- -0.707107  -0.707107
-  0.0        0.0
-  0.707107  -0.707107
+  0.707107      0.408248
+  1.11022e-16  -0.816497
+ -0.707107      0.408248
 ```
 """
-function data_poly(x, degree=2; orthogonal=false)
+function data_poly(x::AbstractVector{T}, degree::Int=2; orthogonal::Bool=false) where {T}
     n = length(x)
 
     if orthogonal
         # Step 1: Center the data by subtracting its mean
         z = x .- mean(x)
 
-        # Step 2: Generate the raw polynomial design matrix up to 'degree'
-        X_raw = hcat([z .^ d for d in 0:degree]...)
+        # Step 2: Preallocate the raw polynomial design matrix up to 'degree'
+        X_raw = ones(T, n, degree + 1)
+        for d in 1:degree
+            @inbounds X_raw[:, d+1] .= z .^ d
+        end
 
         # Step 3: QR decomposition
         QR = qr(X_raw)
 
-        # Step 4: Extract the orthogonal matrix Q
+        # Step 4: Extract the orthogonal matrix Q and scale columns
         Z = Matrix(QR.Q[:, 2:end])  # Drop the first column corresponding to the constant term
 
-        # Step 5: Scale columns to have norm 1 (to match R's behavior)
-        norm2 = sum(Z .^ 2, dims=1)
-        Z = Z ./ sqrt.(norm2)
+        # Step 5: Scale columns to have norm 1
+        for j in 1:size(Z, 2)
+            col_norm = norm(Z[:, j])
+            Z[:, j] .= Z[:, j] ./ col_norm
+        end
 
         # Step 6: Ensure the signs are consistent
         for j in 1:size(Z, 2)
             if sum(Z[:, j]) < 0
-                Z[:, j] = -Z[:, j]
+                Z[:, j] .= -Z[:, j]
             end
         end
 
         return Z
     else
-        # Raw polynomial terms
-        X = hcat([x .^ d for d in 1:degree]...)
+        # Preallocate matrix for raw polynomial terms
+        X = ones(T, n, degree)
+        for d in 1:degree
+            @inbounds X[:, d] .= x .^ d
+        end
         return X
     end
 end
-
-
 
 # Test against R =============================================
 
