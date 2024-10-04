@@ -41,10 +41,14 @@ def osf_download(file):
         import pandas as pd
     except ImportError:
         raise ImportError("Please install 'pandas' (`pip install pandas`)")
+    import json
 
     download_ok = False
     while download_ok == False:
-        data = pd.read_csv(file["file"]._get(file["url"], stream=True).raw)
+        if ".csv" in file["name"]:
+            data = pd.read_csv(file["file"]._get(file["url"], stream=True).raw)
+        if ".json" in file["name"]:
+            data = json.load(file["file"]._get(file["url"], stream=True).raw)
         if len(data) > 0:
             download_ok = True
 
