@@ -45,10 +45,11 @@ def osf_download(file):
 
     download_ok = False
     while download_ok == False:
-        if ".csv" in file["name"]:
-            data = pd.read_csv(file["file"]._get(file["url"], stream=True).raw)
         if ".json" in file["name"]:
             data = json.load(file["file"]._get(file["url"], stream=True).raw)
+        else:
+            data = pd.read_csv(file["file"]._get(file["url"], stream=True).raw)
+
         if len(data) > 0:
             download_ok = True
 
